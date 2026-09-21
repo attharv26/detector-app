@@ -1,6 +1,6 @@
 import os
-import shutil
-import uuid
+import cloudinary
+import cloudinary.uploader
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,37 +9,44 @@ app = FastAPI()
 # Enable CORS to allow requests from your frontend application
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to restrict origins in production
+    allow_origins=["https://symphonious-churros-b7bbf9.netlify.app"],  # Change to your specific frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Directory to save uploaded images
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Configure Cloudinary securely using environment variables
+# (Make sure to add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET
+# in your hosting provider's dashboard environment settings)
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True,
+)
 
 
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
   try:
-    # Generate unique filename to avoid overwriting
-    file_extension = (
-        file.filename.split(".")[-1] if "." in file.filename else "jpg"
-    )
-    unique_filename = f"{uuid.uuid4()}.{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    # Read the incoming image file bytes from the frontend request
+    file_bytes = await file.read()
 
-    # Save the file to disk
-    with open(file_path, "wb") as buffer:
-      shutil.copyfileobj(file.file, buffer)
+    # Upload the image directly into Cloudinary memory under a specific folder
+    upload_result = cloudinary.uploader.upload(
+        file_bytes, folder="scanner_app_uploads"
+    )
+
+    # Extract the secure public URL of the saved image
+    image_url = upload_result.get("secure_url")
 
     return {
         "status": "success",
-        "filename": unique_filename,
-        "message": "Image captured and stored successfully",
+        "url": image_url,
+        "message": "Image captured and stored successfully in Cloudinary!",
     }
+
   except Exception as e:
     raise HTTPException(
-        status_code=500, detail=f"Failed to save image: {str(e)}"
+        status_code=500, detail=f"Failed to upload image: {str(e)}"
     )
