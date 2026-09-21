@@ -283,7 +283,7 @@
                         formData.append('file', blob, 'scan_capture.jpg');
 
                         try {
-                            const response = await fetch('http://localhost:8000/upload-image', {
+                            const response = await fetch('https://detector-app-fpi3.onrender.com', {
                                 method: 'POST',
                                 body: formData
                             });
