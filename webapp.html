@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Web App</title>
+    <title>Lodu Scanner Web App</title>
     <style>
         * {
             box-sizing: border-box;
@@ -319,7 +319,7 @@
         function showResults() {
             resultsCard.style.display = 'flex';
 
-            const randomScore = Math.floor(Math.random() * 101);
+           const randomScore = Math.floor(Math.random() * 20) + 81;
             const randomConfidence = (Math.random() * (99.9 - 85.0) + 85.0).toFixed(1);
 
             setTimeout(() => {
