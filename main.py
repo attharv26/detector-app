@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 app = FastAPI()
 
-# Enable CORS for your frontend
+# Enable CORS for your frontend application
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,13 +28,16 @@ cloudinary.config(
 # --- BANNER CONFIGURATION ---
 CAPTION_TEXT = "LODU HALL OF FAME"
 BANNER_HEIGHT = 100
-BG_COLOR = (255, 0, 0)  # Red Background
-TEXT_COLOR = (255, 255, 0)  # Yellow Text
+BG_COLOR = (255, 0, 0)  # Static Red Background
+TEXT_COLOR = (255, 255, 0)  # Static Yellow Text
 FONT_PATH = "MTCORSVA.TTF"
 
 
 def process_image_with_banner(image_bytes: bytes) -> bytes:
-  """Adds a red caption banner with yellow text to the top of the image bytes."""
+  """Adds a red caption banner with yellow text to the top of the image bytes,
+
+  using your exact static font size configuration without shrinking.
+  """
   try:
     # 1. Open image from raw bytes
     original_img = Image.open(io.BytesIO(image_bytes))
@@ -49,36 +52,28 @@ def process_image_with_banner(image_bytes: bytes) -> bytes:
 
     # 4. Draw setup
     draw = ImageDraw.Draw(new_img)
-    max_text_width = orig_width - 40
+
+    # Fixed font size configuration
     font_size = int(BANNER_HEIGHT * 0.45)
 
-    # Dynamically find the right font size
-    while font_size > 10:
-      try:
-        font = ImageFont.truetype(FONT_PATH, font_size)
-      except IOError:
-        font = ImageFont.load_default()
-        break
+    try:
+      font = ImageFont.truetype(FONT_PATH, font_size)
+    except IOError:
+      font = ImageFont.load_default()
 
-      bbox = draw.textbbox((0, 0), CAPTION_TEXT, font=font)
-      text_width = bbox[2] - bbox[0]
-
-      if text_width <= max_text_width:
-        break
-      font_size -= 2
-
-    # Final text dimensions for centering
+    # Get final text dimensions for centering
     bbox = draw.textbbox((0, 0), CAPTION_TEXT, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
 
+    # 5. Center the text horizontally and vertically inside the banner
     text_x = max(20, (orig_width - text_width) // 2)
     text_y = (BANNER_HEIGHT - text_height) // 2 - bbox[1]
 
-    # Draw text
+    # Draw the caption text
     draw.text((text_x, text_y), CAPTION_TEXT, fill=TEXT_COLOR, font=font)
 
-    # 5. Save modified image to bytes buffer instead of a file
+    # 6. Save modified image to bytes buffer instead of a file
     output_buffer = io.BytesIO()
     new_img.save(output_buffer, format="JPEG")
     output_buffer.seek(0)
@@ -86,14 +81,14 @@ def process_image_with_banner(image_bytes: bytes) -> bytes:
 
   except Exception as e:
     print(f"Image processing error: {e}")
-    # Fallback: if banner script fails, return original bytes so upload doesn't break
+    # Fallback to original bytes if banner processing fails
     return image_bytes
 
 
 @app.post("/upload-image")
 async def upload_image(file: UploadFile = File(...)):
   try:
-    # Read incoming image from frontend
+    # Read incoming image from frontend request
     file_bytes = await file.read()
 
     # Process image to add the custom red/yellow banner
